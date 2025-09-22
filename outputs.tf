@@ -170,7 +170,7 @@ output "oidc_provider_arn" {
 
 output "cluster_tls_certificate_sha1_fingerprint" {
   description = "The SHA1 fingerprint of the public key of the cluster's certificate"
-  value       = try(data.tls_certificate.this[0].certificates[0].sha1_fingerprint, null)
+  value       = try(var.custom_oidc_thumbprints[0], null)
 }
 
 ################################################################################

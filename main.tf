@@ -337,8 +337,7 @@ resource "aws_eks_access_policy_association" "this" {
 ################################################################################
 
 module "kms" {
-  source  = "terraform-aws-modules/kms/aws"
-  version = "4.0.0" # Note - be mindful of Terraform/provider version compatibility between modules
+  source = "./modules/kms"
 
   create = local.create && var.create_kms_key && local.enable_encryption_config # not valid on Outposts
 
@@ -446,15 +445,6 @@ resource "aws_security_group_rule" "cluster" {
 locals {
   # Not available on outposts
   create_oidc_provider = local.create && var.enable_irsa && !local.create_outposts_local_cluster
-
-  oidc_root_ca_thumbprint = local.create_oidc_provider && var.include_oidc_root_ca_thumbprint ? [data.tls_certificate.this[0].certificates[0].sha1_fingerprint] : []
-}
-
-data "tls_certificate" "this" {
-  # Not available on outposts
-  count = local.create_oidc_provider && var.include_oidc_root_ca_thumbprint ? 1 : 0
-
-  url = aws_eks_cluster.this[0].identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_openid_connect_provider" "oidc_provider" {
@@ -462,7 +452,7 @@ resource "aws_iam_openid_connect_provider" "oidc_provider" {
   count = local.create_oidc_provider ? 1 : 0
 
   client_id_list  = distinct(compact(concat(["sts.amazonaws.com"], var.openid_connect_audiences)))
-  thumbprint_list = concat(local.oidc_root_ca_thumbprint, var.custom_oidc_thumbprints)
+  thumbprint_list = var.custom_oidc_thumbprints
   url             = aws_eks_cluster.this[0].identity[0].oidc[0].issuer
 
   tags = merge(
